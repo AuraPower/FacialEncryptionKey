@@ -159,7 +159,7 @@ def generate_key(feature_points):
 
 ############## RUN ##################
 def run(enc_path, dec_path):
-    img_path = 'C:\\Users\\Owner\\Pictures\\Headshot\\'
+    img_path = '..\\Headshot\\'
     landmark_model_path = "shape_predictor_68_face_landmarks.dat"
 
     enc_img = process_image(img_path+enc_path)
@@ -168,8 +168,8 @@ def run(enc_path, dec_path):
     enc_feature_points = generate_feature_points(enc_img, landmark_model_path)
     dec_feature_points = generate_feature_points(dec_img, landmark_model_path)
 
-    #visualize_feature_points(enc_img, enc_feature_points)
-    #visualize_feature_points(dec_img, dec_feature_points)
+    visualize_feature_points(enc_img, enc_feature_points)
+    visualize_feature_points(dec_img, dec_feature_points)
 
     enc_feature_point_magnitudes = magnitude(enc_feature_points)
     dec_feature_point_magnitudes = magnitude(dec_feature_points)
