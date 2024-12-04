@@ -137,8 +137,8 @@ def identify_face(img):
     # Detect faces in the image
     faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(256, 256))
     if len(faces) == 0:
-        print("No faces detected in the image.")
-        return None
+        raise RuntimeError("No face detected")
+        
 
     # Take the first detected face (or iterate over all faces if needed)
     x, y, w, h = faces[0]  # Coordinates of the first face
@@ -158,70 +158,49 @@ def generate_key(feature_points):
     return key
 
 ############## RUN ##################
-img_path = 'C:\\Users\\Owner\\Pictures\\Headshot\\'
-enc_image_path = "1000x1000.png"
-dec_image_path = "1000x1000 - Copy.png"
-landmark_model_path = "shape_predictor_68_face_landmarks.dat"
+def run(enc_path, dec_path):
+    img_path = 'C:\\Users\\Owner\\Pictures\\Headshot\\'
+    landmark_model_path = "shape_predictor_68_face_landmarks.dat"
 
-enc_img = process_image(img_path+enc_image_path)
-dec_img = process_image(img_path+dec_image_path)
+    enc_img = process_image(img_path+enc_path)
+    dec_img = process_image(img_path+dec_path)
 
-enc_feature_points = generate_feature_points(enc_img, landmark_model_path)
-dec_feature_points = generate_feature_points(dec_img, landmark_model_path)
+    enc_feature_points = generate_feature_points(enc_img, landmark_model_path)
+    dec_feature_points = generate_feature_points(dec_img, landmark_model_path)
 
-visualize_feature_points(enc_img, enc_feature_points)
-visualize_feature_points(dec_img, dec_feature_points)
+    #visualize_feature_points(enc_img, enc_feature_points)
+    #visualize_feature_points(dec_img, dec_feature_points)
 
-enc_feature_point_magnitudes = magnitude(enc_feature_points)
-dec_feature_point_magnitudes = magnitude(dec_feature_points)
+    enc_feature_point_magnitudes = magnitude(enc_feature_points)
+    dec_feature_point_magnitudes = magnitude(dec_feature_points)
 
-print(f"Enc: {enc_feature_point_magnitudes}")
-print(f"Dec: {dec_feature_point_magnitudes}")
+    encryption_key = generate_key(enc_feature_point_magnitudes)
+    decryption_key = generate_key(dec_feature_point_magnitudes)
 
-encryption_key = generate_key(enc_feature_point_magnitudes)
-decryption_key = generate_key(dec_feature_point_magnitudes)
+    #print(f"Encryption Key Hex: {encryption_key.hex()}")
+    #print(f"Decryption Key Hex: {decryption_key.hex()}")
 
-print(f"Encryption Key Hex: {encryption_key.hex()}")
-print(f"Decryption Key Hex: {decryption_key.hex()}")
+    if (encryption_key) and (decryption_key):
+        plaintext = b'This is a secret message.'
 
-if (encryption_key) and (decryption_key):
-    plaintext = b'This is a secret message.'
+        ciphertext, nonce = encrypt_blowfish_ctr(encryption_key, plaintext)
+        #print(f"Plain text: {plaintext}")
+        #print(f"Ciphertext: {ciphertext.hex()}")
 
-    ciphertext, nonce = encrypt_blowfish_ctr(encryption_key, plaintext)
-    print(f"Ciphertext: {ciphertext.hex()}")
+        decrypted_text = decrypt_blowfish_ctr(decryption_key, ciphertext, nonce)
 
-    decrypted_text = decrypt_blowfish_ctr(decryption_key, ciphertext, nonce)
-
-    if (decrypted_text == plaintext):
-        print("Decryption Successful")
-        print(f"Decrypted text: {decrypted_text}")
+        
+        if (decrypted_text == plaintext):
+            #print("Decryption Successful")
+            #print(f"Decrypted text: {decrypted_text}")
+            return True
+        else:
+            #print("Decryption failed")
+            #print(f"Decrypted text: {decrypted_text}")
+            return False
     else:
-        print("Decryption failed")
-else:
-    print("Key generation failed.")
+        print("Key generation failed.")
 
-"""
-encryption_key = generate_key_from_face(path+'500x500.png')
 
-decryption_key = generate_key_from_face(path+'500x500.png')
-
-print(f"Encryption Key Hex: {encryption_key.hex()}")
-print(f"Decryption Key Hex: {decryption_key.hex()}")
-
-if (encryption_key) and (decryption_key):
-    plaintext = b'This is a secret message.'
-
-    ciphertext, nonce = encrypt_blowfish_ctr(encryption_key, plaintext)
-    print(f"Ciphertext: {ciphertext.hex()}")
-    print(f"Nonce: {nonce.hex()}")
-
-    decrypted_text = decrypt_blowfish_ctr(decryption_key, ciphertext, nonce)
-
-    if (decrypted_text == plaintext):
-        print("Decryption Successful")
-        print(f"Decrypted text: {decrypted_text}")
-    else:
-        print("Decryption failed")
-else:
-    print("Key generation failed.")
-"""
+if __name__ == "__main__":
+    run()
