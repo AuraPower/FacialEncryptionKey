@@ -1,15 +1,9 @@
 import unittest
-from itertools import product
-from BlowFish_FacialRecognition import run
+from BlowFish_FacialRecognition import test
 
 '''
 resolutions = ['500x500', '1000x1000', '2000,2000']
 extentions = ['png', 'jpg', 'tif', 'bmp']
-
-enc_path_res = "500x500"
-enc_path_ext = ".png"
-dec_path_res = "500x500"
-dec_path_ext = ".tif"
 '''
 
 class TestFiles(unittest.TestCase):
@@ -24,8 +18,7 @@ class TestFiles(unittest.TestCase):
             for dec in files:
 
                 with self.subTest(enc_file=enc, dec_file=dec):
-                    # Ensure the main function returns True for each combination
-                    self.assertFalse(run(enc, dec))
+                    self.assertFalse(test(enc, dec))
 
 if __name__ == '__main__':
     # Redirect test output to a log file

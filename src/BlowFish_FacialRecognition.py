@@ -96,7 +96,9 @@ def visualize_feature_points(img, feature_points):
     cv.waitKey(0)
     cv.destroyAllWindows()
 
-def generate_feature_points(img, landmark_model_path):
+def generate_feature_points(img):
+
+    landmark_model_path = "..\\shape_predictor_68_face_landmarks.dat"
 
     # Load the dlib face detector and shape predictor
     detector = dlib.get_frontal_face_detector()
@@ -135,7 +137,7 @@ def identify_face(img):
     face_cascade = cv.CascadeClassifier(cv.data.haarcascades + "haarcascade_frontalface_default.xml")
 
     # Detect faces in the image
-    faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(256, 256))
+    faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(32, 32))
     if len(faces) == 0:
         raise RuntimeError("No face detected")
         
@@ -157,19 +159,130 @@ def generate_key(feature_points):
 
     return key
 
+############### IO ENC DEC FUNCTIONS #################
+
+def encrypt(img_path, plain_path):
+    """
+    Encrypts a plaintext file using an encryption key derived from an image.
+
+    Args:
+        img_path: Path to the image used for generating the key.
+        plain_path: Path to the plaintext file to be encrypted.
+
+    Saves:
+        - Encrypted ciphertext to 'cipher.txt'.
+        - Generated nonce to 'nonce.txt'.
+    """
+    # Read plain text as binary
+    with open(plain_path, "rb") as file:
+        plain_text = file.read()
+
+    # generate key from feature points. generate feature points from image
+    img = process_image(img_path)
+    feature_points = generate_feature_points(img)
+    key = generate_key(feature_points)
+
+    ciphertxt, noncetxt = encrypt_blowfish_ctr(key, plain_text)
+
+    # write to files
+    with open("cipher.txt", "wb") as cipher:
+        cipher.write(ciphertxt)
+
+    with open("nonce.txt", "wb") as nonce:
+        nonce.write(noncetxt)
+
+
+def decrypt(img_path, cipher_path, nonce_path):
+    """
+    Decrypts a ciphertext file using an encryption key derived from an image.
+
+    Args:
+        img_path: Path to the image used for generating the key.
+        cipher_path: Path to the file containing the encrypted ciphertext.
+        nonce_path: Path to the file containing the nonce.
+
+    Returns:
+        The decrypted plaintext as a string.
+    """
+    # Read the cipher text as binary
+    with open(cipher_path, "rb") as file:
+        cipher_text = file.read()
+
+    # Read the nonce as binary
+    with open(nonce_path, "rb") as file:
+        nonce = file.read()  
+
+    # generate key from feature points. generate feature points from image
+    img = process_image(img_path)
+    feature_points = generate_feature_points(img)
+    key = generate_key(feature_points)
+
+    # Decrypt the ciphertext
+    decrypted_text = decrypt_blowfish_ctr(key, cipher_text, nonce)
+
+    # Convert bytes to string
+    try:
+        
+        with open("decrypted.txt", "w") as decrypted:
+            decrypted.write(decrypted_text.decode())
+        
+    except:
+        with open("decrypted.txt", "w") as decrypted:
+            decrypted.write(""+decrypted_text.hex())
+        print("!!!!!!! Decoding Failed !!!!!!!!")
+
 ############## RUN ##################
 def run(enc_path, dec_path):
+    enc_img = process_image(enc_path)
+    dec_img = process_image(dec_path)
+
+    enc_feature_points = generate_feature_points(enc_img)
+    dec_feature_points = generate_feature_points(dec_img)
+
+    # visualize_feature_points(enc_img, enc_feature_points)
+    # visualize_feature_points(dec_img, dec_feature_points)
+
+    enc_feature_point_magnitudes = magnitude(enc_feature_points)
+    dec_feature_point_magnitudes = magnitude(dec_feature_points)
+
+    #print(f"Enc Point Magnitudes {enc_feature_point_magnitudes}")
+    #print(f"Dec Point Magnitudes {dec_feature_point_magnitudes}")
+
+    encryption_key = generate_key(enc_feature_point_magnitudes)
+    decryption_key = generate_key(dec_feature_point_magnitudes)
+
+    print(f"Encryption Key Hex: {encryption_key.hex()}")
+    print(f"Decryption Key Hex: {decryption_key.hex()}")
+
+    if (encryption_key) and (decryption_key):
+        plaintext = b'This is a secret message.'
+
+        ciphertext, nonce = encrypt_blowfish_ctr(encryption_key, plaintext)
+        print(f"Plain text: {plaintext}")
+        print(f"Ciphertext: {ciphertext.hex()}")
+
+        decrypted_text = decrypt_blowfish_ctr(decryption_key, ciphertext, nonce)
+
+        
+        if (decrypted_text == plaintext):
+            print("Decryption Successful")
+            print(f"Decrypted text: {decrypted_text}")
+            return True
+        else:
+            print("Decryption failed")
+            print(f"Decrypted text: {decrypted_text}")
+            return False
+    else:
+        print("Key generation failed.")
+
+def test(enc_path, dec_path):
     img_path = '..\\Headshot\\'
-    landmark_model_path = "shape_predictor_68_face_landmarks.dat"
 
     enc_img = process_image(img_path+enc_path)
     dec_img = process_image(img_path+dec_path)
 
-    enc_feature_points = generate_feature_points(enc_img, landmark_model_path)
-    dec_feature_points = generate_feature_points(dec_img, landmark_model_path)
-
-    visualize_feature_points(enc_img, enc_feature_points)
-    visualize_feature_points(dec_img, dec_feature_points)
+    enc_feature_points = generate_feature_points(enc_img)
+    dec_feature_points = generate_feature_points(dec_img)
 
     enc_feature_point_magnitudes = magnitude(enc_feature_points)
     dec_feature_point_magnitudes = magnitude(dec_feature_points)
@@ -177,29 +290,21 @@ def run(enc_path, dec_path):
     encryption_key = generate_key(enc_feature_point_magnitudes)
     decryption_key = generate_key(dec_feature_point_magnitudes)
 
-    #print(f"Encryption Key Hex: {encryption_key.hex()}")
-    #print(f"Decryption Key Hex: {decryption_key.hex()}")
 
     if (encryption_key) and (decryption_key):
         plaintext = b'This is a secret message.'
 
         ciphertext, nonce = encrypt_blowfish_ctr(encryption_key, plaintext)
-        #print(f"Plain text: {plaintext}")
-        #print(f"Ciphertext: {ciphertext.hex()}")
 
         decrypted_text = decrypt_blowfish_ctr(decryption_key, ciphertext, nonce)
 
         
         if (decrypted_text == plaintext):
-            #print("Decryption Successful")
-            #print(f"Decrypted text: {decrypted_text}")
             return True
         else:
-            #print("Decryption failed")
-            #print(f"Decrypted text: {decrypted_text}")
             return False
     else:
-        print("Key generation failed.")
+        print("Key not generated")
 
 
 if __name__ == "__main__":
