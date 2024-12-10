@@ -98,7 +98,7 @@ def visualize_feature_points(img, feature_points):
 
 def generate_feature_points(img):
 
-    landmark_model_path = "..\\shape_predictor_68_face_landmarks.dat"
+    landmark_model_path = "..\\Models\\shape_predictor_68_face_landmarks.dat"
 
     # Load the dlib face detector and shape predictor
     detector = dlib.get_frontal_face_detector()
@@ -137,14 +137,13 @@ def identify_face(img):
     face_cascade = cv.CascadeClassifier(cv.data.haarcascades + "haarcascade_frontalface_default.xml")
 
     # Detect faces in the image
-    faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(32, 32))
+    faces = face_cascade.detectMultiScale(img, scaleFactor=1.1, minNeighbors=5, minSize=(64, 64))
     if len(faces) == 0:
         raise RuntimeError("No face detected")
         
-
     # Take the first detected face (or iterate over all faces if needed)
     x, y, w, h = faces[0]  # Coordinates of the first face
-    face_roi = img[y:y+h, x:x+w]  # Extract the region of interest (ROI)
+    face_roi = img[y:y+h, x:x+w]
 
     return face_roi
 
@@ -155,7 +154,7 @@ def generate_key(feature_points):
     feature_bytes = feature_array.tobytes()
 
     # Hash the feature bytes to generate a key
-    key = hashlib.sha256(feature_bytes).digest()[:16]  # Generate 16-byte key
+    key = hashlib.sha256(feature_bytes).digest()[:56]  # Generate 56-byte key
 
     return key
 
@@ -190,7 +189,6 @@ def encrypt(img_path, plain_path):
 
     with open("nonce.txt", "wb") as nonce:
         nonce.write(noncetxt)
-
 
 def decrypt(img_path, cipher_path, nonce_path):
     """
@@ -229,7 +227,7 @@ def decrypt(img_path, cipher_path, nonce_path):
     except:
         with open("decrypted.txt", "w") as decrypted:
             decrypted.write(""+decrypted_text.hex())
-        print("!!!!!!! Decoding Failed !!!!!!!!")
+        print("DECRYPTION FAILED")
 
 ############## RUN ##################
 def run(enc_path, dec_path):
@@ -239,14 +237,18 @@ def run(enc_path, dec_path):
     enc_feature_points = generate_feature_points(enc_img)
     dec_feature_points = generate_feature_points(dec_img)
 
-    # visualize_feature_points(enc_img, enc_feature_points)
-    # visualize_feature_points(dec_img, dec_feature_points)
+    visualize_feature_points(enc_img, enc_feature_points)
+    visualize_feature_points(dec_img, dec_feature_points)
 
     enc_feature_point_magnitudes = magnitude(enc_feature_points)
     dec_feature_point_magnitudes = magnitude(dec_feature_points)
 
-    #print(f"Enc Point Magnitudes {enc_feature_point_magnitudes}")
-    #print(f"Dec Point Magnitudes {dec_feature_point_magnitudes}")
+    print(f"Enc Point Magnitudes {enc_feature_point_magnitudes}")
+    print()
+    print(f"Dec Point Magnitudes {dec_feature_point_magnitudes}")
+    print()
+    print(f"Magnitude Difference: {enc_feature_point_magnitudes-dec_feature_point_magnitudes}")
+
 
     encryption_key = generate_key(enc_feature_point_magnitudes)
     decryption_key = generate_key(dec_feature_point_magnitudes)
@@ -276,7 +278,7 @@ def run(enc_path, dec_path):
         print("Key generation failed.")
 
 def test(enc_path, dec_path):
-    img_path = '..\\Headshot\\'
+    img_path = '..\\Faces\\'
 
     enc_img = process_image(img_path+enc_path)
     dec_img = process_image(img_path+dec_path)
