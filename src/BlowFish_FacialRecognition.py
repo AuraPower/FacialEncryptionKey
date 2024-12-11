@@ -1,4 +1,4 @@
-import cv2 as cv # type: ignore
+import cv2 as cv
 import numpy as np
 from Crypto.Cipher import Blowfish
 from Crypto.Random import get_random_bytes
@@ -147,16 +147,44 @@ def identify_face(img):
 
     return face_roi
 
-def generate_key(feature_points):
+def aggregate_features(features, num_bins=10):
+    """
+    Aggregate feature magnitudes into bins to introduce tolerance.
 
-    # Flatten the feature points and convert them to a byte array
-    feature_array = np.array(feature_points, dtype=np.int32).flatten()
-    feature_bytes = feature_array.tobytes()
+    Args:
+        features (numpy.ndarray): Array of feature magnitudes.
+        num_bins (int): Number of bins for aggregation.
 
-    # Hash the feature bytes to generate a key
-    key = hashlib.sha256(feature_bytes).digest()[:56]  # Generate 56-byte key
+    Returns:
+        numpy.ndarray: Aggregated feature magnitudes.
+    """
+    bin_size = len(features) // num_bins
+    aggregated = []
 
-    return key
+    for i in range(0, len(features), bin_size):
+        bin_values = features[i:i + bin_size]
+        aggregated.append(np.mean(bin_values, axis=0))  # Use mean or median for stability
+
+    return np.array(aggregated)
+
+def generate_key(features, num_bins=4):
+    """
+    Generate a 56-byte encryption key from aggregated features.
+
+    Args:
+        features (numpy.ndarray): Array of feature magnitudes.
+        num_bins (int): Number of bins for aggregation.
+
+    Returns:
+        bytes: A 56-byte encryption key.
+    """
+    aggregated_features = aggregate_features(features, num_bins=num_bins)
+    feature_bytes = aggregated_features.astype(np.float32).tobytes()
+
+    # Use sha256 for 56-byte key
+    hash1 = hashlib.sha256(feature_bytes).digest()[:56]
+    return hash1
+
 
 ############### IO ENC DEC FUNCTIONS #################
 
@@ -223,13 +251,15 @@ def decrypt(img_path, cipher_path, nonce_path):
         
         with open("decrypted.txt", "w") as decrypted:
             decrypted.write(decrypted_text.decode())
-        
-    except:
+        print("Decryption Successful")
+    except Exception as e:
         with open("decrypted.txt", "w") as decrypted:
             decrypted.write(""+decrypted_text.hex())
-        print("DECRYPTION FAILED")
+        print(f"DECRYPTION FAILED: {e}")
+        raise
 
 ############## RUN ##################
+
 def run(enc_path, dec_path):
     enc_img = process_image(enc_path)
     dec_img = process_image(dec_path)
@@ -237,8 +267,8 @@ def run(enc_path, dec_path):
     enc_feature_points = generate_feature_points(enc_img)
     dec_feature_points = generate_feature_points(dec_img)
 
-    visualize_feature_points(enc_img, enc_feature_points)
-    visualize_feature_points(dec_img, dec_feature_points)
+    # visualize_feature_points(enc_img, enc_feature_points)
+    # visualize_feature_points(dec_img, dec_feature_points)
 
     enc_feature_point_magnitudes = magnitude(enc_feature_points)
     dec_feature_point_magnitudes = magnitude(dec_feature_points)

@@ -1,5 +1,7 @@
 import unittest
 from BlowFish_FacialRecognition import test
+from BlowFish_FacialRecognition import unstable_run
+
 
 '''
 resolutions = ['500x500', '1000x1000', '2000,2000']
@@ -17,6 +19,8 @@ m_files = ['M512.png','M512.tif','M512.bmp','M512.jpg','M1024.png','M1024.tif','
 
 class TestFiles(unittest.TestCase):
 
+    path = "..\\Faces\\"
+
     def test_M(self):
     # Define File and and extensions
         files = ['M512.png','M512.tif','M512.bmp','M512.jpg','M1024.png','M1024.tif','M1024.bmp','M1024.jpg','M2048.png','M2048.tif','M2048.bmp','M2048.jpg']
@@ -25,7 +29,7 @@ class TestFiles(unittest.TestCase):
             for dec in files:
 
                 with self.subTest(enc_file=enc, dec_file=dec):
-                    self.assertFalse(test(enc, dec))
+                    self.assertFalse(test(self.path+enc, self.path+dec))
     
     def test_F(self):
     # Define File and and extensions
@@ -34,7 +38,7 @@ class TestFiles(unittest.TestCase):
         for enc in files:
             for dec in files:
                 with self.subTest(enc_file=enc, dec_file=dec):
-                    self.assertFalse(test(enc, dec))
+                    self.assertFalse(test(self.path+enc, self.path+dec))
 
     """def test_personal_imgs(self):
         # Define the resolutions and extensions
